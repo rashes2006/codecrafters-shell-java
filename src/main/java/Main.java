@@ -17,7 +17,7 @@ public class Main {
                 if (a.substring(5).equals("echo")){
                     System.out.println("echo is a shell builtin");
                 }
-                else if (a.substring(5).equals("echo")){
+                else if (a.substring(5).equals("exit")){
                     System.out.println("exit is a shell builtin");
                 }
             }
