@@ -11,7 +11,7 @@ public class Main {
                 break;
             }
             else if (a.startsWith("echo")){
-                System.out.println(a.substring(6));
+                System.out.println(a.substring(5));
             }
             else {
             System.out.println(a + ": command not found");}
