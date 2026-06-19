@@ -14,7 +14,7 @@ public class Main {
                 System.out.println(a.substring(5));
             }
             else if (a.startsWith("type")){
-                    System.out.println(a.substring(5)+ "is a shell builtin");
+                    System.out.println(a.substring(5)+ " is a shell builtin");
                 
             }
             else {
