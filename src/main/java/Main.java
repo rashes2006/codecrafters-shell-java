@@ -5,6 +5,24 @@ import java.util.List;
 public class Main {
     private static int nextJobNumber = 1;
 
+    private static class Job {
+        int number;
+        long pid;
+        String command;
+        String status;
+        Process process;
+
+        Job(int number, long pid, String command, String status, Process process) {
+            this.number = number;
+            this.pid = pid;
+            this.command = command;
+            this.status = status;
+            this.process = process;
+        }
+    }
+
+    private static final List<Job> jobsList = new java.util.ArrayList<>();
+
     public static void main(String[] args) throws Exception {
         List<String> builtins = List.of("exit", "echo", "type", "pwd", "cd", "jobs");
         Scanner sc = new Scanner(System.in);
@@ -115,7 +133,17 @@ break;
                         System.err.println("type: missing argument");
                     }
                 } else if (command.equals("jobs")) {
-                    // Empty implementation
+                    for (int j = 0; j < jobsList.size(); j++) {
+                        Job job = jobsList.get(j);
+                        char marker = ' ';
+                        if (j == jobsList.size() - 1) {
+                            marker = '+';
+                        } else if (j == jobsList.size() - 2) {
+                            marker = '-';
+                        }
+                        String statusField = String.format("%-24s", job.status);
+                        System.out.println("[" + job.number + "]" + marker + "  " + statusField + job.command);
+                    }
                 } else {
                     // For external commands, we restore streams of the shell process,
                     // and configure redirection on the child process itself.
@@ -174,6 +202,7 @@ break;
                             if (parsed.runInBackground) {
                                 int jobNum = nextJobNumber++;
                                 System.out.println("[" + jobNum + "] " + p.pid());
+                                jobsList.add(new Job(jobNum, p.pid(), parsed.commandStr, "Running", p));
                             } else {
                                 p.waitFor();
                             }
@@ -229,13 +258,15 @@ break;
         String redirectErrFile;
         boolean appendErr;
         boolean runInBackground;
-        ParsedCommand(String[] args, String redirectFile, boolean appendOut, String redirectErrFile, boolean appendErr, boolean runInBackground) {
+        String commandStr;
+        ParsedCommand(String[] args, String redirectFile, boolean appendOut, String redirectErrFile, boolean appendErr, boolean runInBackground, String commandStr) {
             this.args = args;
             this.redirectFile = redirectFile;
             this.appendOut = appendOut;
             this.redirectErrFile = redirectErrFile;
             this.appendErr = appendErr;
             this.runInBackground = runInBackground;
+            this.commandStr = commandStr;
         }
     }
 
@@ -347,6 +378,23 @@ break;
             tokens.add(new Token(current.toString(), currentTokenQuoted));
         }
 
+        // Build command string before redirection/background operator is processed
+        StringBuilder cmdBuilder = new StringBuilder();
+        for (Token t : tokens) {
+            if (!t.quoted && t.text.equals("&")) {
+                continue;
+            }
+            if (cmdBuilder.length() > 0) {
+                cmdBuilder.append(" ");
+            }
+            if (t.quoted) {
+                cmdBuilder.append("'").append(t.text).append("'");
+            } else {
+                cmdBuilder.append(t.text);
+            }
+        }
+        String commandStr = cmdBuilder.toString().trim() + " &";
+
         // Process background operator
         boolean runInBackground = false;
         if (!tokens.isEmpty()) {
@@ -406,6 +454,6 @@ break;
             args[i] = tokens.get(i).text;
         }
 
-        return new ParsedCommand(args, redirectFile, appendOut, redirectErrFile, appendErr, runInBackground);
+        return new ParsedCommand(args, redirectFile, appendOut, redirectErrFile, appendErr, runInBackground, commandStr);
     }
 }
