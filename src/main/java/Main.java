@@ -3,6 +3,8 @@ import java.util.Scanner;
 import java.util.List;
 
 public class Main {
+    private static volatile String currentDirectory = System.getProperty("user.dir");
+    private static final List<String> builtins = List.of("exit", "echo", "type", "pwd", "cd", "jobs");
 
     private static class Job {
         int number;
@@ -23,9 +25,7 @@ public class Main {
     private static final List<Job> jobsList = new java.util.ArrayList<>();
 
     public static void main(String[] args) throws Exception {
-        List<String> builtins = List.of("exit", "echo", "type", "pwd", "cd", "jobs");
         Scanner sc = new Scanner(System.in);
-        String currentDirectory = System.getProperty("user.dir");
 
         while (true) {
             reapJobs();
