@@ -37,7 +37,8 @@ public class Main {
                     String path = parts[1];
                     File target;
                     if (path.equals("~")) {
-                        target = new File(System.getProperty("user.home"));
+                        String home = System.getenv("HOME");
+                        target = new File(home != null ? home : System.getProperty("user.home"));
                     } else if (path.startsWith("/")) {
                         target = new File(path);
                     } else {
