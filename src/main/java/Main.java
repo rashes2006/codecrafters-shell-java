@@ -124,7 +124,14 @@ break;
                     current.append(c);
                 }
             } else {
-                if (c == '\'') {
+                if (c == '\\') {
+                    // escape next character
+                    if (i + 1 < input.length()) {
+                        i++; // skip backslash, treat next char literally
+                        current.append(input.charAt(i));
+                        tokenStarted = true;
+                    }
+                } else if (c == '\'') {
                     inSingleQuote = true;
                     tokenStarted = true;
                 } else if (c == '"') {
