@@ -3,7 +3,6 @@ import java.util.Scanner;
 import java.util.List;
 
 public class Main {
-    private static int nextJobNumber = 1;
 
     private static class Job {
         int number;
@@ -215,7 +214,18 @@ break;
                             pb.redirectInput(ProcessBuilder.Redirect.INHERIT);
                             Process p = pb.start();
                             if (parsed.runInBackground) {
-                                int jobNum = nextJobNumber++;
+                                int jobNum;
+                                if (jobsList.isEmpty()) {
+                                    jobNum = 1;
+                                } else {
+                                    int maxJobNum = 0;
+                                    for (Job job : jobsList) {
+                                        if (job.number > maxJobNum) {
+                                            maxJobNum = job.number;
+                                        }
+                                    }
+                                    jobNum = maxJobNum + 1;
+                                }
                                 System.out.println("[" + jobNum + "] " + p.pid());
                                 jobsList.add(new Job(jobNum, p.pid(), parsed.commandStr, "Running", p));
                             } else {
