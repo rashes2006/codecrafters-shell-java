@@ -29,6 +29,7 @@ public class Main {
         String currentDirectory = System.getProperty("user.dir");
 
         while (true) {
+            reapJobs();
             System.out.print("$ ");
             if (!sc.hasNextLine()) {
 break;
@@ -239,6 +240,29 @@ break;
             }
         }
         sc.close();
+    }
+
+    private static void reapJobs() {
+        List<Job> finishedJobs = new java.util.ArrayList<>();
+        for (int j = 0; j < jobsList.size(); j++) {
+            Job job = jobsList.get(j);
+            if (job.status.equals("Running") && !job.process.isAlive()) {
+                job.status = "Done";
+            }
+
+            if (job.status.equals("Done")) {
+                char marker = ' ';
+                if (j == jobsList.size() - 1) {
+                    marker = '+';
+                } else if (j == jobsList.size() - 2) {
+                    marker = '-';
+                }
+                String statusField = String.format("%-24s", job.status);
+                System.out.println("[" + job.number + "]" + marker + "  " + statusField + job.command);
+                finishedJobs.add(job);
+            }
+        }
+        jobsList.removeAll(finishedJobs);
     }
 
     private static String getExecutablePath(String command) {
