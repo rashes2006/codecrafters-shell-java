@@ -18,8 +18,8 @@ public class Main {
                 continue;
             }
 
-            // Split the input into command and arguments by whitespace
-            String[] parts = input.split("\\s+");
+            // Parse command and arguments (handles single quotes)
+            String[] parts = parseArguments(input);
             String command = parts[0];
 
             if (command.equals("exit")) {
@@ -100,5 +100,36 @@ public class Main {
         }
         return null;
     }
-}
 
+    private static String[] parseArguments(String input) {
+        java.util.List<String> tokens = new java.util.ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        boolean inSingleQuote = false;
+
+        for (int i = 0; i < input.length(); i++) {
+            char c = input.charAt(i);
+            if (inSingleQuote) {
+                if (c == '\'') {
+                    inSingleQuote = false; // closing quote
+                } else {
+                    current.append(c); // everything literal inside single quotes
+                }
+            } else {
+                if (c == '\'') {
+                    inSingleQuote = true; // opening quote
+                } else if (c == ' ' || c == '\t') {
+                    if (current.length() > 0) {
+                        tokens.add(current.toString());
+                        current.setLength(0);
+                    }
+                } else {
+                    current.append(c);
+                }
+            }
+        }
+        if (current.length() > 0) {
+            tokens.add(current.toString());
+        }
+        return tokens.toArray(new String[0]);
+    }
+}
