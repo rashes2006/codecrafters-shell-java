@@ -3,6 +3,8 @@ import java.util.Scanner;
 import java.util.List;
 
 public class Main {
+    private static int nextJobNumber = 1;
+
     public static void main(String[] args) throws Exception {
         List<String> builtins = List.of("exit", "echo", "type", "pwd", "cd", "jobs");
         Scanner sc = new Scanner(System.in);
@@ -169,7 +171,12 @@ break;
                             }
                             pb.redirectInput(ProcessBuilder.Redirect.INHERIT);
                             Process p = pb.start();
-                            p.waitFor();
+                            if (parsed.runInBackground) {
+                                int jobNum = nextJobNumber++;
+                                System.out.println("[" + jobNum + "] " + p.pid());
+                            } else {
+                                p.waitFor();
+                            }
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
@@ -221,12 +228,14 @@ break;
         boolean appendOut;
         String redirectErrFile;
         boolean appendErr;
-        ParsedCommand(String[] args, String redirectFile, boolean appendOut, String redirectErrFile, boolean appendErr) {
+        boolean runInBackground;
+        ParsedCommand(String[] args, String redirectFile, boolean appendOut, String redirectErrFile, boolean appendErr, boolean runInBackground) {
             this.args = args;
             this.redirectFile = redirectFile;
             this.appendOut = appendOut;
             this.redirectErrFile = redirectErrFile;
             this.appendErr = appendErr;
+            this.runInBackground = runInBackground;
         }
     }
 
@@ -286,6 +295,14 @@ break;
                     inDoubleQuote = true;
                     currentTokenQuoted = true;
                     tokenStarted = true;
+                } else if (c == '&') {
+                    if (tokenStarted || current.length() > 0) {
+                        tokens.add(new Token(current.toString(), currentTokenQuoted));
+                        current.setLength(0);
+                        tokenStarted = false;
+                        currentTokenQuoted = false;
+                    }
+                    tokens.add(new Token("&", false));
                 } else if (c == '>') {
                     boolean isAppend = false;
                     if (i + 1 < input.length() && input.charAt(i + 1) == '>') {
@@ -328,6 +345,16 @@ break;
 
         if (tokenStarted || current.length() > 0) {
             tokens.add(new Token(current.toString(), currentTokenQuoted));
+        }
+
+        // Process background operator
+        boolean runInBackground = false;
+        if (!tokens.isEmpty()) {
+            Token last = tokens.get(tokens.size() - 1);
+            if (!last.quoted && last.text.equals("&")) {
+                runInBackground = true;
+                tokens.remove(tokens.size() - 1);
+            }
         }
 
         // Process redirection
@@ -379,6 +406,6 @@ break;
             args[i] = tokens.get(i).text;
         }
 
-        return new ParsedCommand(args, redirectFile, appendOut, redirectErrFile, appendErr);
+        return new ParsedCommand(args, redirectFile, appendOut, redirectErrFile, appendErr, runInBackground);
     }
 }
