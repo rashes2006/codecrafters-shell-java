@@ -1,3 +1,4 @@
+import java.io.File;
 import java.util.Scanner;
 import java.util.List;
 
@@ -29,12 +30,32 @@ public class Main {
                 if (builtins.contains(arg)) {
                     System.out.println(arg + " is a shell builtin");
                 } else {
-                    System.out.println(arg + ": not found");
+                    String execPath = getExecutablePath(arg);
+                    if (execPath != null) {
+                        System.out.println(arg + " is " + execPath);
+                    } else {
+                        System.out.println(arg + ": not found");
+                    }
                 }
             } else {
                 System.out.println(input + ": command not found");
             }
         }
         sc.close();
+    }
+
+    private static String getExecutablePath(String command) {
+        String pathEnv = System.getenv("PATH");
+        if (pathEnv == null) {
+            return null;
+        }
+        String[] directories = pathEnv.split(File.pathSeparator);
+        for (String directory : directories) {
+            File file = new File(directory, command);
+            if (file.exists() && file.canExecute()) {
+                return file.getAbsolutePath();
+            }
+        }
+        return null;
     }
 }
