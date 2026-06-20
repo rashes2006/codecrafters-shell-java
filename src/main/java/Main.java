@@ -133,8 +133,13 @@ break;
                         System.err.println("type: missing argument");
                     }
                 } else if (command.equals("jobs")) {
+                    List<Job> finishedJobs = new java.util.ArrayList<>();
                     for (int j = 0; j < jobsList.size(); j++) {
                         Job job = jobsList.get(j);
+                        if (job.status.equals("Running") && !job.process.isAlive()) {
+                            job.status = "Done";
+                        }
+
                         char marker = ' ';
                         if (j == jobsList.size() - 1) {
                             marker = '+';
@@ -142,8 +147,17 @@ break;
                             marker = '-';
                         }
                         String statusField = String.format("%-24s", job.status);
-                        System.out.println("[" + job.number + "]" + marker + "  " + statusField + job.command);
+                        String cmdToPrint = job.command;
+                        if (job.status.equals("Running")) {
+                            cmdToPrint += " &";
+                        }
+                        System.out.println("[" + job.number + "]" + marker + "  " + statusField + cmdToPrint);
+
+                        if (job.status.equals("Done")) {
+                            finishedJobs.add(job);
+                        }
                     }
+                    jobsList.removeAll(finishedJobs);
                 } else {
                     // For external commands, we restore streams of the shell process,
                     // and configure redirection on the child process itself.
@@ -393,7 +407,7 @@ break;
                 cmdBuilder.append(t.text);
             }
         }
-        String commandStr = cmdBuilder.toString().trim() + " &";
+        String commandStr = cmdBuilder.toString().trim();
 
         // Process background operator
         boolean runInBackground = false;
