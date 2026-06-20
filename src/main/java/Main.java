@@ -26,9 +26,12 @@ break;
             String[] parts = parsed.args;
             String command = parts[0];
             String redirectFile = parsed.redirectFile;
+            String redirectErrFile = parsed.redirectErrFile;
 
             java.io.PrintStream originalOut = System.out;
+            java.io.PrintStream originalErr = System.err;
             java.io.PrintStream fileOut = null;
+            java.io.PrintStream fileErr = null;
 
             if (redirectFile != null) {
                 try {
@@ -44,6 +47,23 @@ break;
                     System.setOut(fileOut);
                 } catch (Exception e) {
                     System.err.println(e.getMessage());
+                }
+            }
+
+            if (redirectErrFile != null) {
+                try {
+                    File errFile = new File(redirectErrFile);
+                    if (!errFile.isAbsolute()) {
+                        errFile = new File(currentDirectory, redirectErrFile);
+                    }
+                    File parent = errFile.getParentFile();
+                    if (parent != null) {
+                        parent.mkdirs();
+                    }
+                    fileErr = new java.io.PrintStream(new java.io.FileOutputStream(errFile));
+                    System.setErr(fileErr);
+                } catch (Exception e) {
+                    originalErr.println(e.getMessage());
                 }
             }
 
@@ -73,7 +93,7 @@ break;
                         if (target.exists() && target.isDirectory()) {
                             currentDirectory = target.getCanonicalPath();
                         } else {
-                            System.out.println("cd: " + path + ": No such file or directory");
+                            System.err.println("cd: " + path + ": No such file or directory");
                         }
                     }
                 } else if (command.equals("type")) {
@@ -86,19 +106,24 @@ break;
                             if (execPath != null) {
                                 System.out.println(arg + " is " + execPath);
                             } else {
-                                System.out.println(arg + ": not found");
+                                System.err.println(arg + ": not found");
                             }
                         }
                     } else {
-                        System.out.println("type: missing argument");
+                        System.err.println("type: missing argument");
                     }
                 } else {
-                    // For external commands, we restore System.out of the shell process,
+                    // For external commands, we restore streams of the shell process,
                     // and configure redirection on the child process itself.
                     System.setOut(originalOut);
+                    System.setErr(originalErr);
                     if (fileOut != null) {
                         fileOut.close();
                         fileOut = null;
+                    }
+                    if (fileErr != null) {
+                        fileErr.close();
+                        fileErr = null;
                     }
 
                     String execPath = getExecutablePath(command);
@@ -116,24 +141,40 @@ break;
                                     parent.mkdirs();
                                 }
                                 pb.redirectOutput(outputFile);
-                                pb.redirectError(ProcessBuilder.Redirect.INHERIT);
-                                pb.redirectInput(ProcessBuilder.Redirect.INHERIT);
                             } else {
-                                pb.inheritIO();
+                                pb.redirectOutput(ProcessBuilder.Redirect.INHERIT);
                             }
+                            if (redirectErrFile != null) {
+                                File errFile = new File(redirectErrFile);
+                                if (!errFile.isAbsolute()) {
+                                    errFile = new File(currentDirectory, redirectErrFile);
+                                }
+                                File parent = errFile.getParentFile();
+                                if (parent != null) {
+                                    parent.mkdirs();
+                                }
+                                pb.redirectError(errFile);
+                            } else {
+                                pb.redirectError(ProcessBuilder.Redirect.INHERIT);
+                            }
+                            pb.redirectInput(ProcessBuilder.Redirect.INHERIT);
                             Process p = pb.start();
                             p.waitFor();
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
                     } else {
-                        System.out.println(command + ": command not found");
+                        System.err.println(command + ": command not found");
                     }
                 }
             } finally {
                 System.setOut(originalOut);
+                System.setErr(originalErr);
                 if (fileOut != null) {
                     fileOut.close();
+                }
+                if (fileErr != null) {
+                    fileErr.close();
                 }
             }
         }
@@ -167,9 +208,11 @@ break;
     private static class ParsedCommand {
         String[] args;
         String redirectFile;
-        ParsedCommand(String[] args, String redirectFile) {
+        String redirectErrFile;
+        ParsedCommand(String[] args, String redirectFile, String redirectErrFile) {
             this.args = args;
             this.redirectFile = redirectFile;
+            this.redirectErrFile = redirectErrFile;
         }
     }
 
@@ -235,6 +278,11 @@ break;
                         current.setLength(0);
                         tokenStarted = false;
                         currentTokenQuoted = false;
+                    } else if (current.length() == 1 && current.charAt(0) == '2' && !currentTokenQuoted) {
+                        tokens.add(new Token("2>", false));
+                        current.setLength(0);
+                        tokenStarted = false;
+                        currentTokenQuoted = false;
                     } else {
                         if (tokenStarted || current.length() > 0) {
                             tokens.add(new Token(current.toString(), currentTokenQuoted));
@@ -264,14 +312,24 @@ break;
 
         // Process redirection
         String redirectFile = null;
+        String redirectErrFile = null;
         for (int i = 0; i < tokens.size(); i++) {
             Token t = tokens.get(i);
-            if (!t.quoted && (t.text.equals(">") || t.text.equals("1>"))) {
-                if (i + 1 < tokens.size()) {
-                    redirectFile = tokens.get(i + 1).text;
-                    tokens.remove(i + 1);
-                    tokens.remove(i);
-                    i--;
+            if (!t.quoted) {
+                if (t.text.equals(">") || t.text.equals("1>")) {
+                    if (i + 1 < tokens.size()) {
+                        redirectFile = tokens.get(i + 1).text;
+                        tokens.remove(i + 1);
+                        tokens.remove(i);
+                        i--;
+                    }
+                } else if (t.text.equals("2>")) {
+                    if (i + 1 < tokens.size()) {
+                        redirectErrFile = tokens.get(i + 1).text;
+                        tokens.remove(i + 1);
+                        tokens.remove(i);
+                        i--;
+                    }
                 }
             }
         }
@@ -281,6 +339,6 @@ break;
             args[i] = tokens.get(i).text;
         }
 
-        return new ParsedCommand(args, redirectFile);
+        return new ParsedCommand(args, redirectFile, redirectErrFile);
     }
 }
