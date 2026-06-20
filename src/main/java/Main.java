@@ -11,7 +11,7 @@ public class Main {
         while (true) {
             System.out.print("$ ");
             if (!sc.hasNextLine()) {
-                break;
+                break;                <vscode_codeblock_uri>file:///Users/rashestripathy/Documents/os_project/codecrafters-
             }
             String input = sc.nextLine().trim();
             if (input.isEmpty()) {
@@ -105,29 +105,46 @@ public class Main {
         java.util.List<String> tokens = new java.util.ArrayList<>();
         StringBuilder current = new StringBuilder();
         boolean inSingleQuote = false;
+        boolean inDoubleQuote = false;
+        boolean tokenStarted = false;
 
         for (int i = 0; i < input.length(); i++) {
             char c = input.charAt(i);
             if (inSingleQuote) {
                 if (c == '\'') {
-                    inSingleQuote = false; // closing quote
-                } else {
-                    current.append(c); // everything literal inside single quotes
-                }
-            } else {
-                if (c == '\'') {
-                    inSingleQuote = true; // opening quote
-                } else if (c == ' ' || c == '\t') {
-                    if (current.length() > 0) {
-                        tokens.add(current.toString());
-                        current.setLength(0);
-                    }
+                    inSingleQuote = false;
                 } else {
                     current.append(c);
                 }
+            } else if (inDoubleQuote) {
+                if (c == '"') {
+                    inDoubleQuote = false;
+                } else {
+                    // preserve everything literally inside double quotes (spaces too)
+                    current.append(c);
+                }
+            } else {
+                if (c == '\'') {
+                    inSingleQuote = true;
+                    tokenStarted = true;
+                } else if (c == '"') {
+                    inDoubleQuote = true;
+                    tokenStarted = true;
+                } else if (c == ' ' || c == '\t') {
+                    if (tokenStarted || current.length() > 0) {
+                        tokens.add(current.toString());
+                        current.setLength(0);
+                        tokenStarted = false;
+                    }
+                    // else skip additional delimiters
+                } else {
+                    current.append(c);
+                    tokenStarted = true;
+                }
             }
         }
-        if (current.length() > 0) {
+
+        if (tokenStarted || current.length() > 0) {
             tokens.add(current.toString());
         }
         return tokens.toArray(new String[0]);
