@@ -4,7 +4,7 @@ import java.util.List;
 
 public class Main {
     public static void main(String[] args) throws Exception {
-        List<String> builtins = List.of("exit", "echo", "type");
+        List<String> builtins = List.of("exit", "echo", "type", "pwd");
         Scanner sc = new Scanner(System.in);
 
         while (true) {
@@ -29,6 +29,8 @@ public class Main {
                 } else {
                     System.out.println();
                 }
+            } else if (command.equals("pwd")) {
+                System.out.println(System.getProperty("user.dir"));
             } else if (command.equals("type")) {
                 if (parts.length > 1) {
                     String arg = parts[1];
