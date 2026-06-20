@@ -43,7 +43,7 @@ break;
                     if (parent != null) {
                         parent.mkdirs();
                     }
-                    fileOut = new java.io.PrintStream(new java.io.FileOutputStream(outputFile));
+                    fileOut = new java.io.PrintStream(new java.io.FileOutputStream(outputFile, parsed.appendOut));
                     System.setOut(fileOut);
                 } catch (Exception e) {
                     System.err.println(e.getMessage());
@@ -60,7 +60,7 @@ break;
                     if (parent != null) {
                         parent.mkdirs();
                     }
-                    fileErr = new java.io.PrintStream(new java.io.FileOutputStream(errFile));
+                    fileErr = new java.io.PrintStream(new java.io.FileOutputStream(errFile, parsed.appendErr));
                     System.setErr(fileErr);
                 } catch (Exception e) {
                     originalErr.println(e.getMessage());
@@ -140,7 +140,11 @@ break;
                                 if (parent != null) {
                                     parent.mkdirs();
                                 }
-                                pb.redirectOutput(outputFile);
+                                if (parsed.appendOut) {
+                                    pb.redirectOutput(ProcessBuilder.Redirect.appendTo(outputFile));
+                                } else {
+                                    pb.redirectOutput(outputFile);
+                                }
                             } else {
                                 pb.redirectOutput(ProcessBuilder.Redirect.INHERIT);
                             }
@@ -153,7 +157,11 @@ break;
                                 if (parent != null) {
                                     parent.mkdirs();
                                 }
-                                pb.redirectError(errFile);
+                                if (parsed.appendErr) {
+                                    pb.redirectError(ProcessBuilder.Redirect.appendTo(errFile));
+                                } else {
+                                    pb.redirectError(errFile);
+                                }
                             } else {
                                 pb.redirectError(ProcessBuilder.Redirect.INHERIT);
                             }
@@ -208,11 +216,15 @@ break;
     private static class ParsedCommand {
         String[] args;
         String redirectFile;
+        boolean appendOut;
         String redirectErrFile;
-        ParsedCommand(String[] args, String redirectFile, String redirectErrFile) {
+        boolean appendErr;
+        ParsedCommand(String[] args, String redirectFile, boolean appendOut, String redirectErrFile, boolean appendErr) {
             this.args = args;
             this.redirectFile = redirectFile;
+            this.appendOut = appendOut;
             this.redirectErrFile = redirectErrFile;
+            this.appendErr = appendErr;
         }
     }
 
@@ -273,13 +285,19 @@ break;
                     currentTokenQuoted = true;
                     tokenStarted = true;
                 } else if (c == '>') {
+                    boolean isAppend = false;
+                    if (i + 1 < input.length() && input.charAt(i + 1) == '>') {
+                        isAppend = true;
+                        i++; // consume second '>'
+                    }
+
                     if (current.length() == 1 && current.charAt(0) == '1' && !currentTokenQuoted) {
-                        tokens.add(new Token("1>", false));
+                        tokens.add(new Token(isAppend ? "1>>" : "1>", false));
                         current.setLength(0);
                         tokenStarted = false;
                         currentTokenQuoted = false;
                     } else if (current.length() == 1 && current.charAt(0) == '2' && !currentTokenQuoted) {
-                        tokens.add(new Token("2>", false));
+                        tokens.add(new Token(isAppend ? "2>>" : "2>", false));
                         current.setLength(0);
                         tokenStarted = false;
                         currentTokenQuoted = false;
@@ -290,7 +308,7 @@ break;
                             tokenStarted = false;
                             currentTokenQuoted = false;
                         }
-                        tokens.add(new Token(">", false));
+                        tokens.add(new Token(isAppend ? ">>" : ">", false));
                     }
                 } else if (c == ' ' || c == '\t') {
                     if (tokenStarted || current.length() > 0) {
@@ -312,13 +330,24 @@ break;
 
         // Process redirection
         String redirectFile = null;
+        boolean appendOut = false;
         String redirectErrFile = null;
+        boolean appendErr = false;
         for (int i = 0; i < tokens.size(); i++) {
             Token t = tokens.get(i);
             if (!t.quoted) {
                 if (t.text.equals(">") || t.text.equals("1>")) {
                     if (i + 1 < tokens.size()) {
                         redirectFile = tokens.get(i + 1).text;
+                        appendOut = false;
+                        tokens.remove(i + 1);
+                        tokens.remove(i);
+                        i--;
+                    }
+                } else if (t.text.equals(">>") || t.text.equals("1>>")) {
+                    if (i + 1 < tokens.size()) {
+                        redirectFile = tokens.get(i + 1).text;
+                        appendOut = true;
                         tokens.remove(i + 1);
                         tokens.remove(i);
                         i--;
@@ -326,6 +355,15 @@ break;
                 } else if (t.text.equals("2>")) {
                     if (i + 1 < tokens.size()) {
                         redirectErrFile = tokens.get(i + 1).text;
+                        appendErr = false;
+                        tokens.remove(i + 1);
+                        tokens.remove(i);
+                        i--;
+                    }
+                } else if (t.text.equals("2>>")) {
+                    if (i + 1 < tokens.size()) {
+                        redirectErrFile = tokens.get(i + 1).text;
+                        appendErr = true;
                         tokens.remove(i + 1);
                         tokens.remove(i);
                         i--;
@@ -339,6 +377,6 @@ break;
             args[i] = tokens.get(i).text;
         }
 
-        return new ParsedCommand(args, redirectFile, redirectErrFile);
+        return new ParsedCommand(args, redirectFile, appendOut, redirectErrFile, appendErr);
     }
 }
