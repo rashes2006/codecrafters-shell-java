@@ -4,8 +4,9 @@ import java.util.List;
 
 public class Main {
     public static void main(String[] args) throws Exception {
-        List<String> builtins = List.of("exit", "echo", "type", "pwd");
+        List<String> builtins = List.of("exit", "echo", "type", "pwd", "cd");
         Scanner sc = new Scanner(System.in);
+        String currentDirectory = System.getProperty("user.dir");
 
         while (true) {
             System.out.print("$ ");
@@ -30,7 +31,24 @@ public class Main {
                     System.out.println();
                 }
             } else if (command.equals("pwd")) {
-                System.out.println(System.getProperty("user.dir"));
+                System.out.println(currentDirectory);
+            } else if (command.equals("cd")) {
+                if (parts.length > 1) {
+                    String path = parts[1];
+                    File target;
+                    if (path.equals("~")) {
+                        target = new File(System.getProperty("user.home"));
+                    } else if (path.startsWith("/")) {
+                        target = new File(path);
+                    } else {
+                        target = new File(currentDirectory, path);
+                    }
+                    if (target.exists() && target.isDirectory()) {
+                        currentDirectory = target.getCanonicalPath();
+                    } else {
+                        System.out.println("cd: " + path + ": No such file or directory");
+                    }
+                }
             } else if (command.equals("type")) {
                 if (parts.length > 1) {
                     String arg = parts[1];
@@ -52,6 +70,7 @@ public class Main {
                 if (execPath != null) {
                     try {
                         ProcessBuilder pb = new ProcessBuilder(parts);
+                        pb.directory(new File(currentDirectory));
                         pb.inheritIO();
                         Process p = pb.start();
                         p.waitFor();
@@ -81,3 +100,4 @@ public class Main {
         return null;
     }
 }
+
