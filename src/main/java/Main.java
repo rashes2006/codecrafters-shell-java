@@ -120,29 +120,26 @@ break;
                 if (c == '"') {
                     inDoubleQuote = false;
                 } else if (c == '\\') {
-                    // handle escaped characters inside double quotes (only " and \\ are escaped in this stage)
                     if (i + 1 < input.length()) {
                         char next = input.charAt(i + 1);
-                        if (next == '"' || next == '\\') {
-                            i++; // skip the backslash
+                        if (next == '"' || next == '$' || next == '`' || next == '\\') {
+                            i++;
                             current.append(next);
-                            tokenStarted = true;
-                            continue;
+                        } else {
+                            current.append(c);
                         }
+                    } else {
+                        current.append(c);
                     }
-                    // backslash is treated literally
-                    current.append(c);
                     tokenStarted = true;
                 } else {
-                    // preserve everything literally inside double quotes (spaces too)
                     current.append(c);
                     tokenStarted = true;
                 }
             } else {
                 if (c == '\\') {
-                    // escape next character
-                    if (i + 1 < input.length()) {
-                        i++; // skip backslash, treat next char literally
+                    if (i + 1 < input.length() && input.charAt(i + 1) != '\n') {
+                        i++;
                         current.append(input.charAt(i));
                         tokenStarted = true;
                     }
