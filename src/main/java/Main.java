@@ -4,7 +4,7 @@ import java.util.List;
 
 public class Main {
     public static void main(String[] args) throws Exception {
-        List<String> builtins = List.of("exit", "echo", "type", "pwd", "cd");
+        List<String> builtins = List.of("exit", "echo", "type", "pwd", "cd", "jobs");
         Scanner sc = new Scanner(System.in);
         String currentDirectory = System.getProperty("user.dir");
 
@@ -112,6 +112,8 @@ break;
                     } else {
                         System.err.println("type: missing argument");
                     }
+                } else if (command.equals("jobs")) {
+                    // Empty implementation
                 } else {
                     // For external commands, we restore streams of the shell process,
                     // and configure redirection on the child process itself.
