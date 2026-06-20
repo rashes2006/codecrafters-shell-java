@@ -17,28 +17,48 @@ public class Main {
                 continue;
             }
 
-            // Split the input into command and argument
-            String[] parts = input.split(" ", 2);
+            // Split the input into command and arguments by whitespace
+            String[] parts = input.split("\\s+");
             String command = parts[0];
-            String arg = parts.length > 1 ? parts[1] : "";
 
             if (command.equals("exit")) {
                 break;
             } else if (command.equals("echo")) {
-                System.out.println(arg);
-            } else if (command.equals("type")) {
-                if (builtins.contains(arg)) {
-                    System.out.println(arg + " is a shell builtin");
+                if (parts.length > 1) {
+                    System.out.println(String.join(" ", java.util.Arrays.copyOfRange(parts, 1, parts.length)));
                 } else {
-                    String execPath = getExecutablePath(arg);
-                    if (execPath != null) {
-                        System.out.println(arg + " is " + execPath);
+                    System.out.println();
+                }
+            } else if (command.equals("type")) {
+                if (parts.length > 1) {
+                    String arg = parts[1];
+                    if (builtins.contains(arg)) {
+                        System.out.println(arg + " is a shell builtin");
                     } else {
-                        System.out.println(arg + ": not found");
+                        String execPath = getExecutablePath(arg);
+                        if (execPath != null) {
+                            System.out.println(arg + " is " + execPath);
+                        } else {
+                            System.out.println(arg + ": not found");
+                        }
                     }
+                } else {
+                    System.out.println("type: missing argument");
                 }
             } else {
-                System.out.println(input + ": command not found");
+                String execPath = getExecutablePath(command);
+                if (execPath != null) {
+                    try {
+                        ProcessBuilder pb = new ProcessBuilder(parts);
+                        pb.inheritIO();
+                        Process p = pb.start();
+                        p.waitFor();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                } else {
+                    System.out.println(command + ": command not found");
+                }
             }
         }
         sc.close();
