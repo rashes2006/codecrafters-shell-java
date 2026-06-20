@@ -11,7 +11,7 @@ public class Main {
         while (true) {
             System.out.print("$ ");
             if (!sc.hasNextLine()) {
-                break;                <vscode_codeblock_uri>file:///Users/rashestripathy/Documents/os_project/codecrafters-
+break;
             }
             String input = sc.nextLine().trim();
             if (input.isEmpty()) {
