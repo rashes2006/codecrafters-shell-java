@@ -119,9 +119,24 @@ break;
             } else if (inDoubleQuote) {
                 if (c == '"') {
                     inDoubleQuote = false;
+                } else if (c == '\\') {
+                    // handle escaped characters inside double quotes (only " and \\ are escaped in this stage)
+                    if (i + 1 < input.length()) {
+                        char next = input.charAt(i + 1);
+                        if (next == '"' || next == '\\') {
+                            i++; // skip the backslash
+                            current.append(next);
+                            tokenStarted = true;
+                            continue;
+                        }
+                    }
+                    // backslash is treated literally
+                    current.append(c);
+                    tokenStarted = true;
                 } else {
                     // preserve everything literally inside double quotes (spaces too)
                     current.append(c);
+                    tokenStarted = true;
                 }
             } else {
                 if (c == '\\') {
